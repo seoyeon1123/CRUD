@@ -12,10 +12,12 @@ module.exports = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
     req.user = decoded;
     next();
   } catch (error) {
     console.error('Invalid token:', error.message);
-    res.status(400).send('Invalid token');
+    // Content-Type을 application/json으로 설정하여 JSON 형식의 응답을 보냄
+    res.type('application/json').status(400).json({ error: 'Invalid token' });
   }
 };

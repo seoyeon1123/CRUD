@@ -1,18 +1,21 @@
+require('dotenv').config({
+  path: '/Users/iseoyeon/Desktop/workspace/CRUD/src/.env',
+});
+
 const express = require('express');
 const app = express();
 const { body, check, validationResult } = require('express-validator');
-const cors = require('cors');
 const { validateError } = require('./middleware/validator');
 const User = require('./models/User');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const dotenv = require('dotenv');
 const { emailAuth, verificationCodes } = require('./emailAuth');
 const loginAuth = require('./middleware/loginAuth');
 
-dotenv.config();
-app.use(express.json());
+const cors = require('cors');
 app.use(cors());
+app.use(express.json());
+
 app.post('/sendVerification', emailAuth);
 
 app.post(
@@ -76,11 +79,11 @@ app.post(
   }
 );
 
-app.use(loginAuth);
 app.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
+
     if (!user) {
       console.log('이메일을 찾을 수 없습니다.');
       return res.status(404).send('이메일을 찾을 수 없습니다.');
@@ -95,12 +98,20 @@ app.post('/login', async (req, res) => {
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
       expiresIn: '1h',
     });
-
-    res.status(200).json({ token });
+    res.type('application/json');
+    return res.status(200).json({ token });
   } catch (e) {
     console.error('로그인 오류:', e.message);
-    res.status(500).send('Error logging in: ' + e.message);
+    return res.status(500).send('Error logging in: ' + e.message);
   }
+});
+
+// 로그인 이후 인증이 필요한 라우트들에 loginAuth 미들웨어 적용
+app.use(loginAuth);
+
+// 이후에 다른 라우트들 작성
+app.get('/home', loginAuth, (req, res) => {
+  res.send('This is a protected route');
 });
 
 module.exports = app;
