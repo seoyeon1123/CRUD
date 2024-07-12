@@ -106,12 +106,32 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// 로그인 이후 인증이 필요한 라우트들에 loginAuth 미들웨어 적용
+app.get('/user', loginAuth, async (req, res) => {
+  try {
+    const token = req.header('Authorization').replace('Bearer ', '');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id; // JWT 토큰에서 추출한 사용자 ID
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ message: '사용자를 찾을 수 없습니다.' });
+    }
+
+    // 사용자 정보 응답
+    return res.status(200).json({ user });
+  } catch (error) {
+    console.error('사용자 정보를 가져오는 중 오류 발생:', error.message);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 app.use(loginAuth);
 
-// 이후에 다른 라우트들 작성
 app.get('/home', loginAuth, (req, res) => {
-  res.send('This is a protected route');
+  // 인증 미들웨어를 통해 유효한 JWT를 검증한 후, 사용자 ID를 URL에 추가하여 반환
+  const userId = req.user.userId;
+  res.redirect(`http://localhost:300/home?user=${userId}`);
 });
 
 module.exports = app;
